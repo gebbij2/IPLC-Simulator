@@ -39,6 +39,11 @@ void iplc_sim_finalize();
 
 typedef struct cache_line
 {
+    int valid;
+    char* tag;
+    int tag_size;
+    int assoc;
+    int *order;
     // Your data structures for implementing your cache should include:
     // a valid bit
     // a tag
@@ -139,11 +144,11 @@ pipeline_t pipeline[MAX_STAGES];
 void iplc_sim_init(int index, int blocksize, int assoc)
 {
     int i=0, j=0;
+    
     unsigned long cache_size = 0;
     cache_index = index;
     cache_blocksize = blocksize;
     cache_assoc = assoc;
-    
     
     cache_blockoffsetbits =
     (int) rint((log( (double) (blocksize * 4) )/ log(2)));
@@ -158,15 +163,27 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     printf("   BlockOffSetBits: %d \n", cache_blockoffsetbits );
     printf("   CacheSize: %lu \n", cache_size );
     
+    //************************************************************
+    // int num_blocks = cache_size/( cache_assoc*(cache_blocksize) );
+    //************************************************************
+
     if (cache_size > MAX_CACHE_SIZE ) {
         printf("Cache too big. Great than MAX SIZE of %d .... \n", MAX_CACHE_SIZE);
         exit(-1);
     }
     
     cache = (cache_line_t *) malloc((sizeof(cache_line_t) * 1<<index));
-    
+
     // Dynamically create our cache based on the information the user entered
     for (i = 0; i < (1<<index); i++) {
+        cache_line_t tmp_line;
+        tmp_line.valid = 0;
+        tmp_line.tag_size = 32- cache_blockoffsetbits - cache_index;
+        // printf("****** TAG SIZE: %u\n\n", tmp_line.tag_size);
+        tmp_line.tag = NULL;
+        tmp_line.assoc = cache_assoc;
+        tmp_line.order = NULL;
+        cache[i] = tmp_line;
     }
     
     // init the pipeline -- set all data to zero and instructions to NOP
@@ -182,6 +199,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
+
     /* You must implement this function */
 }
 
@@ -205,6 +223,7 @@ int iplc_sim_trap_address(unsigned int address)
     int i=0, index=0;
     int tag=0;
     int hit=0;
+    
     
     // Call the appropriate function for a miss or hit
 
