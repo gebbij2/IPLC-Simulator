@@ -200,12 +200,13 @@ void iplc_sim_init(int index, int blocksize, int assoc)
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
+    ++cache_miss;
+    ++cache_access;
     int i;
     for(i=0; i<cache_assoc; ++i){ 
         if(cache[index].order[i] == -1) { break; } 
     }
 
-    ++cache_miss;
     if(i >= cache_assoc-1) // cacheline is full, evict and reorder 
     {
         for(int f = cache_assoc-1; f>0; --f)  //oldest address gets overwritten (evicted)
@@ -230,6 +231,22 @@ void iplc_sim_LRU_replace_on_miss(int index, int tag)
  */
 void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
 {
+    ++cache_hit;
+    ++cache_access;
+    if(assoc_entry == 0)
+    { return; } // no need to update
+
+    else{
+        int tmp = cache[index].order[assoc_entry];
+        int i = assoc_entry;
+        while(i >0)
+        {
+            cache[index].order[i] = cache[index].order[i-1];
+            --i;
+        }
+        cache[index].order[0] = tmp; // move to most recent usage
+    }
+    // ^ Check this works for a full cacheline
     /* You must implement this function */
 }
 
@@ -610,8 +627,8 @@ int main()
         iplc_sim_parse_instruction(buffer);
         if (dump_pipeline)
             iplc_sim_dump_pipeline();
-        ++count;
-        if(count >20){break;}
+        // ++count;
+        // if(count >20){break;}
     }
     
     iplc_sim_finalize();
