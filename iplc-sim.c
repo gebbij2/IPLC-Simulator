@@ -178,8 +178,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     for (i = 0; i < (1<<index); i++) {
         cache_line_t tmp_line;
         tmp_line.valid = 0;
-        tmp_line.tag_size = 32- cache_blockoffsetbits - cache_index;
-        // printf("****** TAG SIZE: %u\n\n", tmp_line.tag_size);
+        // tmp_line.tag_size = 32- cache_blockoffsetbits - cache_index;
         tmp_line.tag = NULL;
         tmp_line.assoc = cache_assoc;
         tmp_line.order = NULL;
@@ -223,7 +222,9 @@ int iplc_sim_trap_address(unsigned int address)
     int i=0, index=0;
     int tag=0;
     int hit=0;
-    
+    index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); //correct
+    tag = address << 32- cache_blockoffsetbits - cache_index;
+    printf("Address %x:  Tag= %x, Index= %x\n", address, tag, index);
     
     // Call the appropriate function for a miss or hit
 
@@ -570,10 +571,13 @@ int main()
     
     iplc_sim_init(index, blocksize, assoc);
     
+    int count = 0;
     while (fgets(buffer, 80, trace_file) != NULL) {
         iplc_sim_parse_instruction(buffer);
         if (dump_pipeline)
             iplc_sim_dump_pipeline();
+        ++count;
+        if(count >20){break;}
     }
     
     iplc_sim_finalize();
