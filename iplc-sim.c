@@ -43,7 +43,7 @@ typedef struct cache_line
     int tag;
     int tag_size;
     int assoc;
-    int *order;
+    int order[];
     // Your data structures for implementing your cache should include:
     // a valid bit
     // a tag
@@ -178,10 +178,12 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     for (i = 0; i < (1<<index); i++) {
         cache_line_t tmp_line;
         tmp_line.valid = 0;
-        // tmp_line.tag_size = 32- cache_blockoffsetbits - cache_index;
         tmp_line.tag = 0;
         tmp_line.assoc = cache_assoc;
-        tmp_line.order = NULL;
+
+        tmp_line.order[cache_assoc];
+        for(j=0; j<assoc; ++j) { tmp_line.order[j] = -1; }
+
         cache[i] = tmp_line;
     }
     
@@ -198,7 +200,27 @@ void iplc_sim_init(int index, int blocksize, int assoc)
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
+    int i;
+    for(i=0; i<cache_assoc; ++i){ 
+        if(cache[index].order[i] == -1) { break; } 
+    }
 
+    ++cache_miss;
+    if(i >= cache_assoc-1) // cacheline is full, evict and reorder 
+    {
+        for(int f = cache_assoc-1; f>0; --f)  //oldest address gets overwritten (evicted)
+        { cache[index].order[f] = cache[index].order[f-1]; }
+
+        cache[index].order[0] = tag; // update most recent address
+    }
+
+    else //found open place for this address
+    { 
+        for(int m=i; m>0; --m)
+        { cache[index].order[m] = cache[index].order[m-1]; }
+
+        cache[index].order[0] = tag; // move this tag to MRU 
+    }
     /* You must implement this function */
 }
 
@@ -222,12 +244,23 @@ int iplc_sim_trap_address(unsigned int address)
     int i=0, index=0;
     int tag=0;
     int hit=0;
+
     index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); //correct
     tag = address >> (cache_blockoffsetbits + cache_index ); //correct
     printf("Address %x:  Tag= %x, Index= %x\n", address, tag, index);
     
-    
+    for(i=0; i <cache_assoc; ++i)
+    {
+        if((cache[index].order)[i] == tag)
+        { hit = 1; break; }
+    }
     // Call the appropriate function for a miss or hit
+    if(hit == 0) //Miss
+    { iplc_sim_LRU_replace_on_miss(index, tag); }
+
+    else //Hit
+    { iplc_sim_LRU_update_on_hit(index, i); }
+    
 
     /* expects you to return 1 for hit, 0 for miss */
     return hit;
