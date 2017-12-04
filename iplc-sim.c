@@ -364,6 +364,7 @@ void iplc_sim_push_pipeline_stage()
     
     /* 2. Check for BRANCH and correct/incorrect Branch Prediction */
     if (pipeline[DECODE].itype == BRANCH) {
+        printf("******HIT A BRANCH\n");
         int branch_taken = 0;
         //check if branch is right or not
         if(pipeline[DECODE].instruction_address==pipeline[DECODE].instruction_address){//this tries to compare memory address probably wrong
@@ -379,8 +380,8 @@ void iplc_sim_push_pipeline_stage()
      *    add delay cycles if needed.
      */
     if (pipeline[MEM].itype == LW) {
+        // if(pipeline[MEM].dest_reg == )
         int inserted_nop = 0;
-
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
@@ -418,21 +419,37 @@ void iplc_sim_process_pipeline_rtype(char *instruction, int dest_reg, int reg1, 
 
 void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_address)
 {
+    
     /* You must implement this function */
 }
 
 void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_address)
 {
+    pipeline[FETCH].itype = SW;
+    pipeline[FETCH].instruction_address = instruction_address;
+
+    pipeline[FETCH].stage.sw.data_address = data_address;
+    pipeline.[FETCH].stage.sw.src_reg = src_reg;
+    pipeline[FETCH].stage.sw.base_reg base_reg;
     /* You must implement this function */
 }
 
 void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 {
+    pipeline[FETCH].itype = BRANCH;
+    pipeline[FETCH].instruction_address = instruction_address;
+
+    pipeline[FETCH].stage.branch.reg1 = reg1;
+    pipeline.[FETCH].stage.branch.reg2 = reg2;
     /* You must implement this function */
 }
 
 void iplc_sim_process_pipeline_jump(char *instruction)
 {
+    pipeline[FETCH].stage.jump.itype = JUMP;
+    pipeline[FETCH].stage.jump.instruction_address = instruction_address;
+
+    strcpy(pipeline[FETCH].stage.jump.instruction, instruction);
     /* You must implement this function */
 }
 
