@@ -39,6 +39,11 @@ void iplc_sim_finalize();
 
 typedef struct cache_line
 {
+    int valid;
+    int tag;
+    int tag_size;
+    int assoc;
+    int order[];
     // Your data structures for implementing your cache should include:
     // a valid bit
     // a tag
@@ -139,11 +144,11 @@ pipeline_t pipeline[MAX_STAGES];
 void iplc_sim_init(int index, int blocksize, int assoc)
 {
     int i=0, j=0;
+    
     unsigned long cache_size = 0;
     cache_index = index;
     cache_blocksize = blocksize;
     cache_assoc = assoc;
-    
     
     cache_blockoffsetbits =
     (int) rint((log( (double) (blocksize * 4) )/ log(2)));
@@ -158,15 +163,28 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     printf("   BlockOffSetBits: %d \n", cache_blockoffsetbits );
     printf("   CacheSize: %lu \n", cache_size );
     
+    //************************************************************
+    // int num_blocks = cache_size/( cache_assoc*(cache_blocksize) );
+    //************************************************************
+
     if (cache_size > MAX_CACHE_SIZE ) {
         printf("Cache too big. Great than MAX SIZE of %d .... \n", MAX_CACHE_SIZE);
         exit(-1);
     }
     
     cache = (cache_line_t *) malloc((sizeof(cache_line_t) * 1<<index));
-    
+
     // Dynamically create our cache based on the information the user entered
     for (i = 0; i < (1<<index); i++) {
+        cache_line_t tmp_line;
+        tmp_line.valid = 0;
+        tmp_line.tag = 0;
+        tmp_line.assoc = cache_assoc;
+
+        tmp_line.order[cache_assoc];
+        for(j=0; j<assoc; ++j) { tmp_line.order[j] = -1; }
+
+        cache[i] = tmp_line;
     }
     
     // init the pipeline -- set all data to zero and instructions to NOP
@@ -182,6 +200,28 @@ void iplc_sim_init(int index, int blocksize, int assoc)
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
+    ++cache_miss;
+    ++cache_access;
+    int i;
+    for(i=0; i<cache_assoc; ++i){ 
+        if(cache[index].order[i] == -1) { break; } 
+    }
+
+    if(i >= cache_assoc-1) // cacheline is full, evict and reorder 
+    {
+        for(int f = cache_assoc-1; f>0; --f)  //oldest address gets overwritten (evicted)
+        { cache[index].order[f] = cache[index].order[f-1]; }
+
+        cache[index].order[0] = tag; // update most recent address
+    }
+
+    else //found open place for this address
+    { 
+        for(int m=i; m>0; --m)
+        { cache[index].order[m] = cache[index].order[m-1]; }
+
+        cache[index].order[0] = tag; // move this tag to MRU 
+    }
     /* You must implement this function */
 }
 
@@ -191,6 +231,22 @@ void iplc_sim_LRU_replace_on_miss(int index, int tag)
  */
 void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
 {
+    ++cache_hit;
+    ++cache_access;
+    if(assoc_entry == 0)
+    { return; } // no need to update
+
+    else{
+        int tmp = cache[index].order[assoc_entry];
+        int i = assoc_entry;
+        while(i >0)
+        {
+            cache[index].order[i] = cache[index].order[i-1];
+            --i;
+        }
+        cache[index].order[0] = tmp; // move to most recent usage
+    }
+    // ^ Check this works for a full cacheline
     /* You must implement this function */
 }
 
@@ -205,8 +261,23 @@ int iplc_sim_trap_address(unsigned int address)
     int i=0, index=0;
     int tag=0;
     int hit=0;
+
+    index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); //correct
+    tag = address >> (cache_blockoffsetbits + cache_index ); //correct
+    printf("Address %x:  Tag= %x, Index= %x\n", address, tag, index);
     
+    for(i=0; i <cache_assoc; ++i)
+    {
+        if((cache[index].order)[i] == tag)
+        { hit = 1; break; }
+    }
     // Call the appropriate function for a miss or hit
+    if(hit == 0) //Miss
+    { iplc_sim_LRU_replace_on_miss(index, tag); }
+
+    else //Hit
+    { iplc_sim_LRU_update_on_hit(index, i); }
+    
 
     /* expects you to return 1 for hit, 0 for miss */
     return hit;
@@ -560,10 +631,13 @@ int main()
     
     iplc_sim_init(index, blocksize, assoc);
     
+    int count = 0;
     while (fgets(buffer, 80, trace_file) != NULL) {
         iplc_sim_parse_instruction(buffer);
         if (dump_pipeline)
             iplc_sim_dump_pipeline();
+        // ++count;
+        // if(count >20){break;}
     }
     
     iplc_sim_finalize();
