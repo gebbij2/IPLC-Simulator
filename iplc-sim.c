@@ -368,7 +368,7 @@ void iplc_sim_push_pipeline_stage()
         int branch_taken = 0;
         printf("branch was taken");//this is never taken so ityoe never=branch
         //check if branch is right or not
-        if(pipeline[DECODE].instruction_address==pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
+        if(pipeline[ALU].instruction_address != pipeline[DECODE].instruction_address + 4){//this tries to compare memory address probably wrong
             branch_taken=1;
         }
         else{
@@ -381,6 +381,7 @@ void iplc_sim_push_pipeline_stage()
         else{
             printf("predictor was not right");
             pipeline_cycles++;
+            pipeline[DECODE].itype = NOP; //Not sure about this
         }
     }
     
@@ -440,6 +441,7 @@ void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_
 
 void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_address)
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = SW;
     pipeline[FETCH].instruction_address = instruction_address;
 
@@ -451,6 +453,7 @@ void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_a
 
 void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = BRANCH;
     pipeline[FETCH].instruction_address = instruction_address;
 
@@ -462,6 +465,7 @@ void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 
 void iplc_sim_process_pipeline_jump(char *instruction)
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = JUMP;
     pipeline[FETCH].instruction_address = instruction_address;
 
@@ -471,6 +475,7 @@ void iplc_sim_process_pipeline_jump(char *instruction)
 
 void iplc_sim_process_pipeline_syscall()
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = SYSCALL;
     pipeline[FETCH].instruction_address = instruction_address;
     /* You must implement this function */
@@ -478,6 +483,7 @@ void iplc_sim_process_pipeline_syscall()
 
 void iplc_sim_process_pipeline_nop()
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = NOP;
     pipeline[FETCH].instruction_address = instruction_address;
     /* You must implement this function */
@@ -678,7 +684,7 @@ int main()
         if (dump_pipeline)
             iplc_sim_dump_pipeline();
         // ++count;
-        // if(count >20){break;}
+        // if(count >100){break;}
     }
     
     iplc_sim_finalize();
