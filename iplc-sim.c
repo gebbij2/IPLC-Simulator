@@ -1,4 +1,3 @@
-
 /***********************************************************************/
 /***********************************************************************
  Pipeline Cache Simulator
@@ -365,11 +364,11 @@ void iplc_sim_push_pipeline_stage()
     
     /* 2. Check for BRANCH and correct/incorrect Branch Prediction */
     if (pipeline[DECODE].itype == BRANCH) {
-        printf("******HIT A BRANCH\n");
+        ++branch_count;
         int branch_taken = 0;
         printf("branch was taken");//this is never taken so ityoe never=branch
         //check if branch is right or not
-        if(pipeline[DECODE].stage.){//this tries to compare memory address probably wrong
+        if(pipeline[DECODE].instruction_address==pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
             branch_taken=1;
         }
         else{
@@ -377,6 +376,7 @@ void iplc_sim_push_pipeline_stage()
         }
         if(branch_taken==branch_predict_taken){
             printf("predictor was right");
+            ++correct_branch_predictions;
         }
         else{
             printf("predictor was not right");
@@ -471,11 +471,15 @@ void iplc_sim_process_pipeline_jump(char *instruction)
 
 void iplc_sim_process_pipeline_syscall()
 {
+    pipeline[FETCH].itype = SYSCALL;
+    pipeline[FETCH].instruction_address = instruction_address;
     /* You must implement this function */
 }
 
 void iplc_sim_process_pipeline_nop()
 {
+    pipeline[FETCH].itype = NOP;
+    pipeline[FETCH].instruction_address = instruction_address;
     /* You must implement this function */
 }
 
