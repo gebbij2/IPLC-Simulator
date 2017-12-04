@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /***********************************************************************/
 /***********************************************************************
  Pipeline Cache Simulator
@@ -392,6 +393,13 @@ void iplc_sim_push_pipeline_stage()
     if (pipeline[MEM].itype == LW) {
         // if(pipeline[MEM].dest_reg == )
         int inserted_nop = 0;
+        if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
+            printf("this was taken");
+            pipeline_cycles+=10;
+        }
+        else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
+            pipeline_cycles+=10;
+        }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
