@@ -264,7 +264,7 @@ int iplc_sim_trap_address(unsigned int address)
 
     index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); //correct
     tag = address >> (cache_blockoffsetbits + cache_index ); //correct
-    printf("Address %x:  Tag= %x, Index= %x\n", address, tag, index);
+    printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
     
     for(i=0; i <cache_assoc; ++i)
     {
@@ -368,7 +368,7 @@ void iplc_sim_push_pipeline_stage()
         int branch_taken = 0;
         printf("branch was taken");//this is never taken so ityoe never=branch
         //check if branch is right or not
-        if(pipeline[ALU].instruction_address != pipeline[DECODE].instruction_address + 4){//this tries to compare memory address probably wrong
+        if(pipeline[DECODE].instruction_address != pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
             branch_taken=1;
         }
         else{
@@ -381,6 +381,7 @@ void iplc_sim_push_pipeline_stage()
         else{
             printf("predictor was not right");
             pipeline_cycles++;
+            pipeline[FETCH].itype = NOP;  //Not sure about this
             pipeline[DECODE].itype = NOP; //Not sure about this
         }
     }
@@ -395,6 +396,13 @@ void iplc_sim_push_pipeline_stage()
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
     if (pipeline[MEM].itype == SW) {
+        if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || 
+                pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
+                        pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
+        {
+            pipeline_cycles += 10; // Requires a stall
+            // printf("NUT\n");
+        }
     }
     
     /* 5. Increment pipe_cycles 1 cycle for normal processing */
