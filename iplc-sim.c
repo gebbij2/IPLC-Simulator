@@ -443,8 +443,8 @@ void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_a
     pipeline[FETCH].instruction_address = instruction_address;
 
     pipeline[FETCH].stage.sw.data_address = data_address;
-    pipeline.[FETCH].stage.sw.src_reg = src_reg;
-    pipeline[FETCH].stage.sw.base_reg base_reg;
+    pipeline[FETCH].stage.sw.src_reg = src_reg;
+    pipeline[FETCH].stage.sw.base_reg = base_reg;
     /* You must implement this function */
 }
 
@@ -454,15 +454,15 @@ void iplc_sim_process_pipeline_branch(int reg1, int reg2)
     pipeline[FETCH].instruction_address = instruction_address;
 
     pipeline[FETCH].stage.branch.reg1 = reg1;
-    pipeline.[FETCH].stage.branch.reg2 = reg2;
+    pipeline[FETCH].stage.branch.reg2 = reg2;
     /* You must implement this function */
 
 }
 
 void iplc_sim_process_pipeline_jump(char *instruction)
 {
-    pipeline[FETCH].stage.jump.itype = JUMP;
-    pipeline[FETCH].stage.jump.instruction_address = instruction_address;
+    pipeline[FETCH].itype = JUMP;
+    pipeline[FETCH].instruction_address = instruction_address;
 
     strcpy(pipeline[FETCH].stage.jump.instruction, instruction);
     /* You must implement this function */
