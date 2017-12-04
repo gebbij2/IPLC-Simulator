@@ -294,6 +294,14 @@ void iplc_sim_push_pipeline_stage()
     /* 2. Check for BRANCH and correct/incorrect Branch Prediction */
     if (pipeline[DECODE].itype == BRANCH) {
         int branch_taken = 0;
+        //check if branch is right or not
+        if(pipeline[DECODE+1].instruction_address>pipeline[DECODE].instruction_address+4){//this tries to compare memory address probably wrong
+            //if the next instruction is not +4 bytes then it was taken
+            printf("branch at address %x was taken\n",pipeline[DECODE].instruction_address);
+        }
+        else{
+            printf("The branch at address %x was not taken\n",pipeline[DECODE]);
+        }
     }
     
     /* 3. Check for LW delays due to use in ALU stage and if data hit/miss
@@ -301,6 +309,7 @@ void iplc_sim_push_pipeline_stage()
      */
     if (pipeline[MEM].itype == LW) {
         int inserted_nop = 0;
+
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
