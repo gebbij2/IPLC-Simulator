@@ -365,13 +365,20 @@ void iplc_sim_push_pipeline_stage()
     /* 2. Check for BRANCH and correct/incorrect Branch Prediction */
     if (pipeline[DECODE].itype == BRANCH) {
         int branch_taken = 0;
+        printf("branch was taken");//this is never taken so ityoe never=branch
         //check if branch is right or not
-        if(pipeline[DECODE].instruction_address==pipeline[DECODE].instruction_address){//this tries to compare memory address probably wrong
-            //if the next instruction is not +4 bytes then it was taken
-            printf("branch at address %x was taken\n",pipeline[DECODE].instruction_address);
+        if(pipeline[DECODE].instruction_address==pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
+            branch_taken=1;
         }
         else{
-            printf("The branch at address %x was not taken\n",pipeline[DECODE]);
+            branch_taken=0;
+        }
+        if(branch_taken==branch_predict_taken){
+            printf("predictor was right");
+        }
+        else{
+            printf("predictor was not right");
+            pipeline_cycles++;
         }
     }
     
@@ -380,7 +387,6 @@ void iplc_sim_push_pipeline_stage()
      */
     if (pipeline[MEM].itype == LW) {
         int inserted_nop = 0;
-
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
@@ -419,6 +425,13 @@ void iplc_sim_process_pipeline_rtype(char *instruction, int dest_reg, int reg1, 
 void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_address)
 {
     /* You must implement this function */
+    iplc_sim_push_pipeline_stage();
+    pipeline[FETCH].itype=LW;
+    pipeline[FETCH].instruction_address=instruction_address;
+
+    pipeline[FETCH].stage.lw.data_address=data_address;
+    pipeline[FETCH].stage.lw.dest_reg=dest_reg;
+    pipeline[FETCH].stage.lw.base_reg=base_reg;
 }
 
 void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_address)
@@ -429,6 +442,7 @@ void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_a
 void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 {
     /* You must implement this function */
+
 }
 
 void iplc_sim_process_pipeline_jump(char *instruction)
