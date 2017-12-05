@@ -380,9 +380,9 @@ void iplc_sim_push_pipeline_stage()
         }
         else{
             printf("predictor was not right");
-            pipeline_cycles += 10;
-            pipeline[FETCH].itype = NOP;  //Not sure about this
-            pipeline[DECODE].itype = NOP; //Not sure about this
+            ++pipeline_cycles;
+            // pipeline[FETCH].itype = NOP;  //Not sure about this
+            // pipeline[DECODE].itype = NOP; //Not sure about this
         }
     }
     
@@ -400,6 +400,9 @@ void iplc_sim_push_pipeline_stage()
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
             pipeline_cycles+=10;
         }
+
+        else if(iplc_sim_trap_address(pipeline[MEM].stage.lw.data_address) == 0)
+        { pipeline_cycles += 10; }
         // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
         //     pipeline_cycles+=10;
         // }
@@ -407,15 +410,16 @@ void iplc_sim_push_pipeline_stage()
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
 
-    //check for immediate
+    //check for immediate, 
     if (pipeline[MEM].itype == SW) {
         if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || 
                 pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
                         pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
         {
             pipeline_cycles += 10; // Requires a stall
-            // printf("NUT\n");
         }
+        else if(iplc_sim_trap_address(pipeline[MEM].stage.sw.data_address) == 0)
+        { pipeline_cycles += 10; }
     }
     
     /* 5. Increment pipe_cycles 1 cycle for normal processing */
