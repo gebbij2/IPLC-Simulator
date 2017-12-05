@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 /***********************************************************************/
 /***********************************************************************
  Pipeline Cache Simulator
@@ -202,7 +202,6 @@ void iplc_sim_init(int index, int blocksize, int assoc)
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
     ++cache_miss;
-    ++cache_access;
     int i;
     for(i=0; i<cache_assoc; ++i){ 
         if(cache[index].order[i] == -1) { break; } 
@@ -233,7 +232,6 @@ void iplc_sim_LRU_replace_on_miss(int index, int tag)
 void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
 {
     ++cache_hit;
-    ++cache_access;
     if(assoc_entry == 0)
     { return; } // no need to update
 
@@ -259,6 +257,7 @@ void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
  */
 int iplc_sim_trap_address(unsigned int address)
 {
+    ++cache_access;
     int i=0, index=0;
     int tag=0;
     int hit=0;
@@ -369,11 +368,11 @@ void iplc_sim_push_pipeline_stage()
         int branch_taken = 0;
         printf("branch was taken");//this is never taken so ityoe never=branch
         //check if branch is right or not
-        if(pipeline[DECODE].instruction_address != pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
-            branch_taken=1;
+        if(pipeline[DECODE].instruction_address == pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
+            branch_taken=0;
         }
         else{
-            branch_taken=0;
+            branch_taken=1;
         }
         if(branch_taken==branch_predict_taken){
             printf("predictor was right");
@@ -381,7 +380,7 @@ void iplc_sim_push_pipeline_stage()
         }
         else{
             printf("predictor was not right");
-            pipeline_cycles++;
+            pipeline_cycles += 10;
             pipeline[FETCH].itype = NOP;  //Not sure about this
             pipeline[DECODE].itype = NOP; //Not sure about this
         }
@@ -397,12 +396,18 @@ void iplc_sim_push_pipeline_stage()
             printf("this was taken");
             pipeline_cycles+=10;
         }
+        //check if immediate
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
             pipeline_cycles+=10;
         }
+        // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
+        //     pipeline_cycles+=10;
+        // }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
+
+    //check for immediate
     if (pipeline[MEM].itype == SW) {
         if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || 
                 pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
