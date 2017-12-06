@@ -392,8 +392,12 @@ void iplc_sim_push_pipeline_stage()
     if (pipeline[MEM].itype == LW) {
         // if(pipeline[MEM].dest_reg == )
         int inserted_nop = 0;
+        
         if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
-            printf("this was taken");
+            pipeline_cycles+=10;
+        }
+        
+        else if(pipeline[WRITEBACK].stage.lw.dest_reg==pipeline[MEM].stage.sw.base_reg){
             pipeline_cycles+=10;
         }
         //check if immediate
@@ -412,7 +416,7 @@ void iplc_sim_push_pipeline_stage()
 
     //check for immediate, 
     if (pipeline[MEM].itype == SW) {
-        if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || 
+        if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || //ALU maybe WRITEBACK
                 pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
                         pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
         {
