@@ -380,18 +380,17 @@ void iplc_sim_push_pipeline_stage()
                 ++correct_branch_predictions;
             }
             else{
-                // Forward in the situations that would result in hazards
                 if(pipeline[FETCH].itype == RTYPE) { 
-                    pipeline[WRITEBACK] = pipeline[MEM]; // WB forwarded to MEM
-                    pipeline[MEM] = pipeline[ALU]; // MEM forwarded to ALU
-                    pipeline[ALU] = pipeline[DECODE]; // ALU forwarded to DECODE
-                    pipeline[DECODE].itype = NOP; // set DECODE to NOP
+                    pipeline[WRITEBACK] = pipeline[MEM]; 
+                    pipeline[MEM] = pipeline[ALU]; 
+                    pipeline[ALU] = pipeline[DECODE];
+                    pipeline[DECODE].itype = NOP;
                     pipeline[DECODE].instruction_address = 0x0; 
                   } 
                   else if (pipeline[FETCH].itype == LW) { 
-                    pipeline[WRITEBACK] = pipeline[ALU]; //  WB forwarded to ALU
-                    pipeline[MEM] = pipeline[DECODE]; // MEM forwarded to DECODE
-                    pipeline[DECODE].itype = NOP; // set DECODE to NOP
+                    pipeline[WRITEBACK] = pipeline[ALU];
+                    pipeline[MEM] = pipeline[DECODE]; 
+                    pipeline[DECODE].itype = NOP; 
                     pipeline[DECODE].instruction_address = 0x0; 
                   }
                 //if branch prediction was not right add the necessary stalls to the pipeline
@@ -457,32 +456,30 @@ void iplc_sim_push_pipeline_stage()
     //check for immediate, 
     if (pipeline[MEM].itype == SW) {
 
-        // Calculate proper index using offset and index size
         int address = pipeline[MEM].stage.sw.data_address;
-        int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
-        // Calculate this address tag 
-        int tag = address >> (cache_blockoffsetbits + cache_index ); 
-        int hit = iplc_sim_trap_address(address); //check cache for data hit/miss
+        int hit = iplc_sim_trap_address(address); 
+
         if(hit == 0)
         { 
             printf("DATA MISS:\t Address 0x%x \n", address);
-
-            if(pipeline[ALU].itype == RTYPE) { // check ALU in pipeline to be rtype
-                if ( (pipeline[ALU].stage.rtype.reg1 == pipeline[MEM].stage.sw.src_reg)
-                    || (pipeline[ALU].stage.rtype.reg2_or_constant ==
-                        pipeline[MEM].stage.sw.src_reg)) // check hazard conditions
-                { 
-                  pipeline[WRITEBACK] = pipeline[MEM]; //  WB forwarded to MEM
-                  pipeline[MEM].itype = NOP; // set DECODE to NOP
-                  pipeline[MEM].instruction_address = 0x0; 
+            if(pipeline[ALU].itype == RTYPE) { 
+                if ( pipeline[ALU].stage.rtype.reg1 == pipeline[MEM].stage.sw.src_reg){
+                    pipeline[WRITEBACK] = pipeline[MEM];
+                    pipeline[MEM].itype = NOP;
+                    pipeline[MEM].instruction_address = 0x0; 
+                }
+                else if(pipeline[ALU].stage.rtype.reg2_or_constant == pipeline[MEM].stage.sw.src_reg){ 
+                    pipeline[WRITEBACK] = pipeline[MEM]; 
+                    pipeline[MEM].itype = NOP;
+                    pipeline[MEM].instruction_address = 0x0; 
                 }
               }
               norm = 0; 
-              pipeline_cycles += CACHE_MISS_DELAY; // add penalty cycles
+              pipeline_cycles += 10;
         }
-
-        if(hit != 0)
-        { printf("DATA HIT:\t Address 0x%x \n", address); }
+        else{
+            printf("DATA HIT:\t Address 0x%x \n", address);
+        }
     }
     
     /* 5. Increment pipe_cycles 1 cycle for normal processing */
