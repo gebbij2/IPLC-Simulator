@@ -163,25 +163,23 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     printf("   Associativity: %d \n", cache_assoc );
     printf("   BlockOffSetBits: %d \n", cache_blockoffsetbits );
     printf("   CacheSize: %lu \n", cache_size );
-    
-    //************************************************************
-    // int num_blocks = cache_size/( cache_assoc*(cache_blocksize) );
-    //************************************************************
 
     if (cache_size > MAX_CACHE_SIZE ) {
         printf("Cache too big. Great than MAX SIZE of %d .... \n", MAX_CACHE_SIZE);
         exit(-1);
     }
-    
-    cache = (cache_line_t *) malloc((sizeof(cache_line_t) * 1<<index));
 
     // Dynamically create our cache based on the information the user entered
+    cache = (cache_line_t *) malloc((sizeof(cache_line_t) * 1<<index));
+    
+    // Initialize each line in the allocated cache
     for (i = 0; i < (1<<index); i++) {
         cache_line_t tmp_line;
         tmp_line.valid = 0;
         tmp_line.tag = 0;
         tmp_line.assoc = cache_assoc;
-
+        
+        // Keep an ordering of the MRU to LRU
         tmp_line.order[cache_assoc];
         for(j=0; j<assoc; ++j) { tmp_line.order[j] = -1; }
 
@@ -203,6 +201,8 @@ void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
     ++cache_miss;
     int i;
+
+    // Look for an open place in line
     for(i=0; i<cache_assoc; ++i){ 
         if(cache[index].order[i] == -1) { break; } 
     }
@@ -222,7 +222,6 @@ void iplc_sim_LRU_replace_on_miss(int index, int tag)
 
         cache[index].order[0] = tag; // move this tag to MRU 
     }
-    /* You must implement this function */
 }
 
 /*
@@ -233,20 +232,20 @@ void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
 {
     ++cache_hit;
     if(assoc_entry == 0)
-    { return; } // no need to update
+    { return; } // no need to update, already MRU
 
     else{
+        // Hold on to address to be updated
         int tmp = cache[index].order[assoc_entry];
         int i = assoc_entry;
         while(i >0)
         {
+            // Shift more recent addresses right
             cache[index].order[i] = cache[index].order[i-1];
             --i;
         }
         cache[index].order[0] = tmp; // move to most recent usage
     }
-    // ^ Check this works for a full cacheline
-    /* You must implement this function */
 }
 
 /*
@@ -262,10 +261,13 @@ int iplc_sim_trap_address(unsigned int address)
     int tag=0;
     int hit=0;
 
-    index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); //correct
-    tag = address >> (cache_blockoffsetbits + cache_index ); //correct
+    // Calculate proper index using offset and index size
+    index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
+    // Calculate this address tag 
+    tag = address >> (cache_blockoffsetbits + cache_index ); 
     printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
     
+    // Search in cacheline for this tag
     for(i=0; i <cache_assoc; ++i)
     {
         if((cache[index].order)[i] == tag)
@@ -278,7 +280,6 @@ int iplc_sim_trap_address(unsigned int address)
     else //Hit
     { iplc_sim_LRU_update_on_hit(index, i); }
     
-
     /* expects you to return 1 for hit, 0 for miss */
     return hit;
 }
@@ -396,10 +397,7 @@ void iplc_sim_push_pipeline_stage()
         if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
             pipeline_cycles+=10;
         }
-        
-        else if(pipeline[WRITEBACK].stage.lw.dest_reg==pipeline[MEM].stage.sw.base_reg){
-            pipeline_cycles+=10;
-        }
+
         //check if immediate
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
             pipeline_cycles+=10;
@@ -416,13 +414,13 @@ void iplc_sim_push_pipeline_stage()
 
     //check for immediate, 
     if (pipeline[MEM].itype == SW) {
-        if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || //ALU maybe WRITEBACK
-                pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
-                        pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
-        {
-            pipeline_cycles += 10; // Requires a stall
-        }
-        else if(iplc_sim_trap_address(pipeline[MEM].stage.sw.data_address) == 0)
+        // if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || //ALU maybe WRITEBACK
+        //         pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
+        //                 pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
+        // {
+        //     pipeline_cycles += 10; // Requires a stall
+        // }
+        if(iplc_sim_trap_address(pipeline[MEM].stage.sw.data_address) == 0)
         { pipeline_cycles += 10; }
     }
     
