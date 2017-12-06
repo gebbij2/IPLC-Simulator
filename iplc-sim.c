@@ -403,8 +403,29 @@ void iplc_sim_push_pipeline_stage()
             pipeline_cycles+=10;
         }
 
-        else if(iplc_sim_trap_address(pipeline[MEM].stage.lw.data_address) == 0)
-        { pipeline_cycles += 10; }
+        // try if not else if
+        int address = pipeline[MEM].stage.lw.data_address;
+        // Calculate proper index using offset and index size
+        int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
+        // Calculate this address tag 
+        int tag = address >> (cache_blockoffsetbits + cache_index ); 
+
+        int hit = iplc_sim_trap_address(address);
+        if(hit == 0)
+        { 
+            pipeline_cycles += 10;
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA MISS:\t Address 0x IN LW %x \n", address);
+            printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
+             
+        }
+
+        if(hit != 0)
+        { 
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA HIT:\t Address 0x IN LW %x \n", address);
+        }
+
         // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
         //     pipeline_cycles+=10;
         // }
@@ -420,8 +441,31 @@ void iplc_sim_push_pipeline_stage()
         // {
         //     pipeline_cycles += 10; // Requires a stall
         // }
-        if(iplc_sim_trap_address(pipeline[MEM].stage.sw.data_address) == 0)
-        { pipeline_cycles += 10; }
+
+        // if(iplc_sim_trap_address(pipeline[MEM].stage.sw.data_address) == 0)
+        // { pipeline_cycles += 10; }
+
+        // Calculate proper index using offset and index size
+        int address = pipeline[MEM].stage.sw.data_address;
+        int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
+        // Calculate this address tag 
+        int tag = address >> (cache_blockoffsetbits + cache_index ); 
+        int hit = iplc_sim_trap_address(address);
+        if(hit == 0)
+        { 
+            pipeline_cycles += 10; 
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA MISS:\t Address 0x%x IN SW\n", address);
+            printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
+            // ADD CYC PRINT LINE HERE AND IN LW
+            
+        }
+
+        if(hit != 0)
+        { 
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA HIT:\t Address 0x%x IN SW\n", address);
+        }
     }
     
     /* 5. Increment pipe_cycles 1 cycle for normal processing */
