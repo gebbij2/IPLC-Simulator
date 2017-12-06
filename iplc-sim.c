@@ -369,40 +369,32 @@ void iplc_sim_push_pipeline_stage()
         ++branch_count;
         int branch_taken = 0;
 
-        if (pipeline[FETCH].instruction_address != 0) {
+        if (pipeline[FETCH].instruction_address) { // check we are given a valid instruction
             if(pipeline[DECODE].instruction_address != pipeline[FETCH].instruction_address-4){
-                /*if the branch is taken, the next instruction address should not follow the normal mips
-                flow, which is add 4 bytes. So if fetch is more than 4 bytes ahead of decode the branch was taken*/
+                /* We know the branch is taken if the next instruction is anything other than
+                4 bytes further ahead than the current address*/
                 branch_taken=1;
             }
-            // else{
-            //     /*the above statement would return true when FETCH's instruction address was 0, this
-            //     makes that case not appear as a valid branch prediction*/
-            //     if(pipeline[FETCH].instruction_address==0){
-            //         branch_taken=0;
-            //     }
-            //     else{
-            //         branch_taken=1;
-            //     }
-            // }
             if(branch_taken==branch_predict_taken){
-                //if the branch prediction was right the correct counter should be added too
+                // increment correct predictions
                 ++correct_branch_predictions;
             }
             else{
-                if(pipeline[FETCH].itype == RTYPE) { // if the last instruction was rtype
-                    pipeline[WRITEBACK] = pipeline[MEM]; // forward WB to be MEM
-                    pipeline[MEM] = pipeline[ALU]; // forward MEM to be ALU
-                    pipeline[ALU] = pipeline[DECODE]; // forward ALU to be DECODE
-                    pipeline[DECODE].itype = NOP; // make DECODE a NOP
-                    pipeline[DECODE].instruction_address = 0x0; // update NOP empty address
-                  } else if (pipeline[FETCH].itype == LW) { // if the last instruction was a lw
-                    pipeline[WRITEBACK] = pipeline[ALU]; // forward WB to be ALU for two stalls
-                    pipeline[MEM] = pipeline[DECODE]; // forward MEM to be DECODE for two stalls
-                    pipeline[DECODE].itype = NOP; // make DECODE a NOP
-                    pipeline[DECODE].instruction_address = 0x0; // update NOP empty address
+                // Forward in the situations that would result in hazards
+                if(pipeline[FETCH].itype == RTYPE) { 
+                    pipeline[WRITEBACK] = pipeline[MEM]; // WB forwarded to MEM
+                    pipeline[MEM] = pipeline[ALU]; // MEM forwarded to ALU
+                    pipeline[ALU] = pipeline[DECODE]; // ALU forwarded to DECODE
+                    pipeline[DECODE].itype = NOP; // set DECODE to NOP
+                    pipeline[DECODE].instruction_address = 0x0; 
+                  } 
+                  else if (pipeline[FETCH].itype == LW) { 
+                    pipeline[WRITEBACK] = pipeline[ALU]; //  WB forwarded to ALU
+                    pipeline[MEM] = pipeline[DECODE]; // MEM forwarded to DECODE
+                    pipeline[DECODE].itype = NOP; // set DECODE to NOP
+                    pipeline[DECODE].instruction_address = 0x0; 
                   }
-                //if branch prediction was not right add the necissary stalls to the pipeline
+                //if branch prediction was not right add the necessary stalls to the pipeline
                 ++pipeline_cycles;
             }
         }
@@ -412,44 +404,21 @@ void iplc_sim_push_pipeline_stage()
      *    add delay cycles if needed.
      */
     if (pipeline[MEM].itype == LW) {
+
         int inserted_nop = 0;
-        
-        int imm = 0;
-        // printf("%s\n", pipeline[ALU].stage.rtype.instruction);
-        for(int i=0; i<6; ++i)
-        {
-            char tmp = (pipeline[ALU].stage.rtype.instruction)[i];
-            // printf("%c", tmp);
-            if(tmp == 'i') { imm = 1; break;}
-        }
 
-        // if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
-        //     pipeline_cycles+=9;
-        //     printf("STALLED HERE\n");
-        // }
-
-        // else if(imm == 0 && pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
-        //     printf("\n ***STALLING HERE %x and %x\n", pipeline[MEM].stage.lw.dest_reg, 
-        //                                                 pipeline[ALU].stage.rtype.reg2_or_constant);
-        //     pipeline_cycles+=9;
-        // }
-
-        // try if not else if
         int address = pipeline[MEM].stage.lw.data_address;
         // Calculate proper index using offset and index size
         int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
         // Calculate this address tag 
         int tag = address >> (cache_blockoffsetbits + cache_index ); 
 
-        int hit = iplc_sim_trap_address(address);
+        int hit = iplc_sim_trap_address(address); //check cache for data hit/miss
         if(hit == 0)
         { 
-            // pipeline_cycles += 9;
             norm = 0;
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA MISS:\t Address 0x%x \n", address);
-            // printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
-            if(pipeline[ALU].itype == RTYPE) { // check ALU in pipeline to be rtype
+            if(pipeline[ALU].itype == RTYPE) { 
                 if ((pipeline[ALU].stage.rtype.reg2_or_constant ==
                   pipeline[MEM].stage.lw.dest_reg) || (pipeline[ALU].stage.rtype.reg1 ==
                   pipeline[MEM].stage.lw.dest_reg)) { // check for a hazard
@@ -458,15 +427,11 @@ void iplc_sim_push_pipeline_stage()
                     pipeline[MEM].instruction_address = 0x0; // update NOP empty address
                   }
                 }
-            //   norm = 1; // update normal process flag to false
-              pipeline_cycles += CACHE_MISS_DELAY; // increment the stall penalty
+              pipeline_cycles += CACHE_MISS_DELAY; 
         }
 
         if(hit != 0)
-        { 
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
-            printf("DATA HIT:\t Address 0x%x \n", address);
-        }
+        { printf("DATA HIT:\t Address 0x%x \n", address); }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
@@ -479,32 +444,27 @@ void iplc_sim_push_pipeline_stage()
         int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
         // Calculate this address tag 
         int tag = address >> (cache_blockoffsetbits + cache_index ); 
-        int hit = iplc_sim_trap_address(address); //determines if there was a data miss which needs to be accounted for
+        int hit = iplc_sim_trap_address(address); //check cache for data hit/miss
         if(hit == 0)
         { 
-            // pipeline_cycles += 9; 
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA MISS:\t Address 0x%x \n", address);
-            // printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
-            // ADD CYC PRINT LINE HERE AND IN LW
+
             if(pipeline[ALU].itype == RTYPE) { // check ALU in pipeline to be rtype
-                if ((pipeline[ALU].stage.rtype.reg2_or_constant ==
-                      pipeline[MEM].stage.sw.src_reg) || (pipeline[ALU].stage.rtype.reg1 ==
-                      pipeline[MEM].stage.sw.src_reg)) { // check for a hazard
-                  pipeline[WRITEBACK] = pipeline[MEM]; // forward WB to be MEM
-                  pipeline[MEM].itype = NOP; // make DECODE a NOP
-                  pipeline[MEM].instruction_address = 0x0; // update NOP empty address
+                if ( (pipeline[ALU].stage.rtype.reg1 == pipeline[MEM].stage.sw.src_reg)
+                    || (pipeline[ALU].stage.rtype.reg2_or_constant ==
+                        pipeline[MEM].stage.sw.src_reg)) // check hazard conditions
+                { 
+                  pipeline[WRITEBACK] = pipeline[MEM]; //  WB forwarded to MEM
+                  pipeline[MEM].itype = NOP; // set DECODE to NOP
+                  pipeline[MEM].instruction_address = 0x0; 
                 }
               }
-              norm = 0; // update normal process flag to false
-              pipeline_cycles += CACHE_MISS_DELAY; // increment the stall penalty
+              norm = 0; 
+              pipeline_cycles += CACHE_MISS_DELAY; // add penalty cycles
         }
 
         if(hit != 0)
-        { 
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
-            printf("DATA HIT:\t Address 0x%x \n", address);
-        }
+        { printf("DATA HIT:\t Address 0x%x \n", address); }
     }
     
     /* 5. Increment pipe_cycles 1 cycle for normal processing */
