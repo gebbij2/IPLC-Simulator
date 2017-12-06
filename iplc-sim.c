@@ -1,3 +1,4 @@
+
 /***********************************************************************/
 /***********************************************************************
  Pipeline Cache Simulator
@@ -201,7 +202,6 @@ void iplc_sim_init(int index, int blocksize, int assoc)
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
     ++cache_miss;
-    ++cache_access;
     int i;
     for(i=0; i<cache_assoc; ++i){ 
         if(cache[index].order[i] == -1) { break; } 
@@ -232,7 +232,6 @@ void iplc_sim_LRU_replace_on_miss(int index, int tag)
 void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
 {
     ++cache_hit;
-    ++cache_access;
     if(assoc_entry == 0)
     { return; } // no need to update
 
@@ -258,13 +257,14 @@ void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
  */
 int iplc_sim_trap_address(unsigned int address)
 {
+    ++cache_access;
     int i=0, index=0;
     int tag=0;
     int hit=0;
 
     index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); //correct
     tag = address >> (cache_blockoffsetbits + cache_index ); //correct
-    printf("Address %x:  Tag= %x, Index= %x\n", address, tag, index);
+    printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
     
     for(i=0; i <cache_assoc; ++i)
     {
@@ -368,11 +368,11 @@ void iplc_sim_push_pipeline_stage()
         int branch_taken = 0;
         printf("branch was taken");//this is never taken so ityoe never=branch
         //check if branch is right or not
-        if(pipeline[DECODE].instruction_address==pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
-            branch_taken=1;
+        if(pipeline[DECODE].instruction_address == pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
+            branch_taken=0;
         }
         else{
-            branch_taken=0;
+            branch_taken=1;
         }
         if(branch_taken==branch_predict_taken){
             printf("predictor was right");
@@ -380,7 +380,9 @@ void iplc_sim_push_pipeline_stage()
         }
         else{
             printf("predictor was not right");
-            pipeline_cycles++;
+            pipeline_cycles += 10;
+            pipeline[FETCH].itype = NOP;  //Not sure about this
+            pipeline[DECODE].itype = NOP; //Not sure about this
         }
     }
     
@@ -388,17 +390,32 @@ void iplc_sim_push_pipeline_stage()
      *    add delay cycles if needed.
      */
     if (pipeline[MEM].itype == LW) {
+        // if(pipeline[MEM].dest_reg == )
         int inserted_nop = 0;
         if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
+            printf("this was taken");
             pipeline_cycles+=10;
         }
+        //check if immediate
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
             pipeline_cycles+=10;
         }
+        // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
+        //     pipeline_cycles+=10;
+        // }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
+
+    //check for immediate
     if (pipeline[MEM].itype == SW) {
+        if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || 
+                pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
+                        pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
+        {
+            pipeline_cycles += 10; // Requires a stall
+            // printf("NUT\n");
+        }
     }
     
     /* 5. Increment pipe_cycles 1 cycle for normal processing */
@@ -445,6 +462,7 @@ void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_
 
 void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_address)
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = SW;
     pipeline[FETCH].instruction_address = instruction_address;
 
@@ -456,6 +474,7 @@ void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_a
 
 void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = BRANCH;
     pipeline[FETCH].instruction_address = instruction_address;
 
@@ -467,6 +486,7 @@ void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 
 void iplc_sim_process_pipeline_jump(char *instruction)
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = JUMP;
     pipeline[FETCH].instruction_address = instruction_address;
 
@@ -476,6 +496,7 @@ void iplc_sim_process_pipeline_jump(char *instruction)
 
 void iplc_sim_process_pipeline_syscall()
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = SYSCALL;
     pipeline[FETCH].instruction_address = instruction_address;
     /* You must implement this function */
@@ -483,6 +504,7 @@ void iplc_sim_process_pipeline_syscall()
 
 void iplc_sim_process_pipeline_nop()
 {
+    iplc_sim_push_pipeline_stage();
     pipeline[FETCH].itype = NOP;
     pipeline[FETCH].instruction_address = instruction_address;
     /* You must implement this function */
@@ -683,7 +705,7 @@ int main()
         if (dump_pipeline)
             iplc_sim_dump_pipeline();
         // ++count;
-        // if(count >20){break;}
+        // if(count >100){break;}
     }
     
     iplc_sim_finalize();
