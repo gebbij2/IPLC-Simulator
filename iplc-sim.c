@@ -366,23 +366,22 @@ void iplc_sim_push_pipeline_stage()
     if (pipeline[DECODE].itype == BRANCH) {
         ++branch_count;
         int branch_taken = 0;
-        printf("branch was taken");//this is never taken so ityoe never=branch
-        //check if branch is right or not
-        if(pipeline[DECODE].instruction_address == pipeline[FETCH].instruction_address-4){//this tries to compare memory address probably wrong
+
+        if(pipeline[DECODE].instruction_address == pipeline[FETCH].instruction_address-4){
+            /*if the branch is taken, the next instruction address should not follow the normal mips
+            flow, which is add 4 bytes. So if fetch is more than 4 bytes ahead of decode the branch was taken*/
             branch_taken=0;
         }
         else{
             branch_taken=1;
         }
         if(branch_taken==branch_predict_taken){
-            printf("predictor was right");
+            //if the branch prediction was right the correct counter should be added too
             ++correct_branch_predictions;
         }
         else{
-            printf("predictor was not right");
+            //if branch prediction was not right add the necissary stalls to the pipeline
             ++pipeline_cycles;
-            // pipeline[FETCH].itype = NOP;  //Not sure about this
-            // pipeline[DECODE].itype = NOP; //Not sure about this
         }
     }
     
@@ -390,22 +389,20 @@ void iplc_sim_push_pipeline_stage()
      *    add delay cycles if needed.
      */
     if (pipeline[MEM].itype == LW) {
-        // if(pipeline[MEM].dest_reg == )
         int inserted_nop = 0;
+        /*if the regester that is being loaded into is being used in the ALU stage
+        a NOP which can be represented as stalls must be inserted
+        */
         if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
-            printf("this was taken");
             pipeline_cycles+=10;
         }
-        //check if immediate
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
             pipeline_cycles+=10;
         }
-
-        else if(iplc_sim_trap_address(pipeline[MEM].stage.lw.data_address) == 0)
-        { pipeline_cycles += 10; }
-        // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
-        //     pipeline_cycles+=10;
-        // }
+        if(iplc_sim_trap_address(pipeline[MEM].stage.lw.data_address) == 0)
+        { 
+            pipeline_cycles += 10;
+        }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
