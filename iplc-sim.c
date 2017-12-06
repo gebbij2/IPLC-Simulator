@@ -390,7 +390,6 @@ void iplc_sim_push_pipeline_stage()
     if (pipeline[MEM].itype == LW) {
         int inserted_nop = 0;
         if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
-            printf("this was taken");
             pipeline_cycles+=10;
         }
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
