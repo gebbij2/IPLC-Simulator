@@ -380,7 +380,7 @@ void iplc_sim_push_pipeline_stage()
         }
         else{
             printf("predictor was not right");
-            pipeline_cycles += 10;
+            pipeline_cycles ++;
             pipeline[FETCH].itype = NOP;  //Not sure about this
             pipeline[DECODE].itype = NOP; //Not sure about this
         }
@@ -400,9 +400,6 @@ void iplc_sim_push_pipeline_stage()
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
             pipeline_cycles+=10;
         }
-        // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
-        //     pipeline_cycles+=10;
-        // }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
