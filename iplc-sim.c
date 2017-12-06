@@ -374,7 +374,15 @@ void iplc_sim_push_pipeline_stage()
             branch_taken=0;
         }
         else{
-            branch_taken=1;
+            /*the above statement would return true when FETCH's instruction address was 0, this
+            makes that case not appear as a valid branch prediction*/
+            if(pipeline[FETCH].instruction_address==0){
+                branch_taken=0;
+            }
+            else{
+                branch_taken=1;
+            }
+
         }
         if(branch_taken==branch_predict_taken){
             //if the branch prediction was right the correct counter should be added too
@@ -396,7 +404,6 @@ void iplc_sim_push_pipeline_stage()
             pipeline_cycles+=10;
         }
 
-        //check if immediate
         else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
             pipeline_cycles+=10;
         }
