@@ -399,25 +399,25 @@ void iplc_sim_push_pipeline_stage()
      */
     if (pipeline[MEM].itype == LW) {
         int inserted_nop = 0;
-
-        int is_i=0;
-        for(int i=0;i<16;i++){
-            /*this should check if the ALU calc is an immediate instruction, in which case there should not be 
-            a stall
-            */
-            if(pipeline[ALU].stage.rtype.instruction[i]=="i"){ //the only instructions with i's should be immediates
-                is_i=1;
-                break;
-            }
+        
+        int imm = 0;
+        // printf("%s\n", pipeline[ALU].stage.rtype.instruction);
+        for(int i=0; i<6; ++i)
+        {
+            char tmp = (pipeline[ALU].stage.rtype.instruction)[i];
+            // printf("%c", tmp);
+            if(tmp == 'i') { imm = 1; break;}
         }
-        if(is_i==1){
-            if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
-                pipeline_cycles+=10;
-            }
 
-            else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
-                pipeline_cycles+=10;
-            }
+        if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
+            pipeline_cycles+=9;
+            printf("STALLED HERE\n");
+        }
+
+        else if(imm == 0 && pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
+            printf("\n ***STALLING HERE %x and %x\n", pipeline[MEM].stage.lw.dest_reg, 
+                                                        pipeline[ALU].stage.rtype.reg2_or_constant);
+            pipeline_cycles+=9;
         }
 
         // try if not else if
@@ -430,15 +430,17 @@ void iplc_sim_push_pipeline_stage()
         int hit = iplc_sim_trap_address(address);
         if(hit == 0)
         { 
-            pipeline_cycles += 10;
-            printf("DATA MISS:\t Address 0x IN LW %x \n", address);
-            printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
+            pipeline_cycles += 9;
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA MISS:\t Address 0x%x \n", address);
+            // printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
              
         }
 
         if(hit != 0)
         { 
-            printf("DATA HIT:\t Address 0x IN LW %x \n", address);
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA HIT:\t Address 0x%x \n", address);
         }
     }
     
@@ -455,15 +457,18 @@ void iplc_sim_push_pipeline_stage()
         int hit = iplc_sim_trap_address(address); //determines if there was a data miss which needs to be accounted for
         if(hit == 0)
         { 
-            pipeline_cycles += 10; 
-            printf("DATA MISS:\t Address 0x%x IN SW\n", address);
-            printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
+            pipeline_cycles += 9; 
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA MISS:\t Address 0x%x \n", address);
+            // printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
+            // ADD CYC PRINT LINE HERE AND IN LW
             
         }
 
         if(hit != 0)
         { 
-            printf("DATA HIT:\t Address 0x%x IN SW\n", address);
+            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+            printf("DATA HIT:\t Address 0x%x \n", address);
         }
     }
     
