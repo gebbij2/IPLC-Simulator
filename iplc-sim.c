@@ -467,32 +467,19 @@ void iplc_sim_push_pipeline_stage()
             // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA HIT:\t Address 0x%x \n", address);
         }
-
-        // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
-        //     pipeline_cycles+=10;
-        // }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
 
     //check for immediate, 
     if (pipeline[MEM].itype == SW) {
-        // if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || //ALU maybe WRITEBACK
-        //         pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
-        //                 pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
-        // {
-        //     pipeline_cycles += 10; // Requires a stall
-        // }
-
-        // if(iplc_sim_trap_address(pipeline[MEM].stage.sw.data_address) == 0)
-        // { pipeline_cycles += 10; }
 
         // Calculate proper index using offset and index size
         int address = pipeline[MEM].stage.sw.data_address;
         int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
         // Calculate this address tag 
         int tag = address >> (cache_blockoffsetbits + cache_index ); 
-        int hit = iplc_sim_trap_address(address);
+        int hit = iplc_sim_trap_address(address); //determines if there was a data miss which needs to be accounted for
         if(hit == 0)
         { 
             // pipeline_cycles += 9; 
