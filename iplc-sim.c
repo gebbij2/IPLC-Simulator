@@ -399,13 +399,25 @@ void iplc_sim_push_pipeline_stage()
      */
     if (pipeline[MEM].itype == LW) {
         int inserted_nop = 0;
-        
-        if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
-            pipeline_cycles+=10;
-        }
 
-        else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
-            pipeline_cycles+=10;
+        int is_i=0;
+        for(int i=0;i<16;i++){
+            /*this should check if the ALU calc is an immediate instruction, in which case there should not be 
+            a stall
+            */
+            if(pipeline[ALU].stage.rtype.instruction[i]=="i"){ //the only instructions with i's should be immediates
+                is_i=1;
+                break;
+            }
+        }
+        if(is_i==1){
+            if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
+                pipeline_cycles+=10;
+            }
+
+            else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
+                pipeline_cycles+=10;
+            }
         }
 
         // try if not else if
@@ -419,7 +431,6 @@ void iplc_sim_push_pipeline_stage()
         if(hit == 0)
         { 
             pipeline_cycles += 10;
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA MISS:\t Address 0x IN LW %x \n", address);
             printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
              
@@ -427,48 +438,31 @@ void iplc_sim_push_pipeline_stage()
 
         if(hit != 0)
         { 
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA HIT:\t Address 0x IN LW %x \n", address);
         }
-
-        // else if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.sw.base_reg){
-        //     pipeline_cycles+=10;
-        // }
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
 
     //check for immediate, 
     if (pipeline[MEM].itype == SW) {
-        // if(pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.lw.base_reg || //ALU maybe WRITEBACK
-        //         pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg1 || 
-        //                 pipeline[MEM].stage.sw.base_reg == pipeline[ALU].stage.rtype.reg2_or_constant)
-        // {
-        //     pipeline_cycles += 10; // Requires a stall
-        // }
-
-        // if(iplc_sim_trap_address(pipeline[MEM].stage.sw.data_address) == 0)
-        // { pipeline_cycles += 10; }
 
         // Calculate proper index using offset and index size
         int address = pipeline[MEM].stage.sw.data_address;
         int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
         // Calculate this address tag 
         int tag = address >> (cache_blockoffsetbits + cache_index ); 
-        int hit = iplc_sim_trap_address(address);
+        int hit = iplc_sim_trap_address(address); //determines if there was a data miss which needs to be accounted for
         if(hit == 0)
         { 
             pipeline_cycles += 10; 
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA MISS:\t Address 0x%x IN SW\n", address);
             printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
-            // ADD CYC PRINT LINE HERE AND IN LW
             
         }
 
         if(hit != 0)
         { 
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA HIT:\t Address 0x%x IN SW\n", address);
         }
     }
