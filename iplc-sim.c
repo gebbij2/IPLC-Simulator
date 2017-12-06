@@ -413,64 +413,55 @@ void iplc_sim_push_pipeline_stage()
      */
     if (pipeline[MEM].itype == LW) {
         int inserted_nop = 0;
-        
         int imm = 0;
-        // printf("%s\n", pipeline[ALU].stage.rtype.instruction);
-        for(int i=0; i<6; ++i)
-        {
+        int address = pipeline[MEM].stage.lw.data_address;//stores the address to be used to compute data hit or miss
+        int hit = iplc_sim_trap_address(address);
+
+        for(int i=0; i<6; ++i){
+            /*
+            this should tell if the instruction is an immediate instruction
+            */
             char tmp = (pipeline[ALU].stage.rtype.instruction)[i];
-            // printf("%c", tmp);
             if(tmp == 'i') { imm = 1; break;}
         }
 
-        // if(pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg1){
-        //     pipeline_cycles+=9;
-        //     printf("STALLED HERE\n");
-        // }
-
-        // else if(imm == 0 && pipeline[MEM].stage.lw.dest_reg==pipeline[ALU].stage.rtype.reg2_or_constant){
-        //     printf("\n ***STALLING HERE %x and %x\n", pipeline[MEM].stage.lw.dest_reg, 
-        //                                                 pipeline[ALU].stage.rtype.reg2_or_constant);
-        //     pipeline_cycles+=9;
-        // }
-
-        // try if not else if
-        int address = pipeline[MEM].stage.lw.data_address;
-        // Calculate proper index using offset and index size
-        int index = (address / (2 << (cache_blockoffsetbits-1))) % (2 << (cache_index-1)); 
-        // Calculate this address tag 
-        int tag = address >> (cache_blockoffsetbits + cache_index ); 
-
-        int hit = iplc_sim_trap_address(address);
-        if(hit == 0)
-        { 
-            // pipeline_cycles += 9;
+        if(hit == 0){ 
+            /*
+            this executes if there was a data miss, should forward the pipeline if the instruction is RTYPE and 
+            has a data hazard 
+            */
             norm = 0;
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
             printf("DATA MISS:\t Address 0x%x \n", address);
-            // printf("(cyc: %u) FETCH:\t %d: 0x%x \t", pipeline_cycles, pipeline[MEM].itype, pipeline[MEM].instruction_address);
-            if(pipeline[ALU].itype == RTYPE) { // check ALU in pipeline to be rtype
-                if ((pipeline[ALU].stage.rtype.reg2_or_constant ==
-                  pipeline[MEM].stage.lw.dest_reg) || (pipeline[ALU].stage.rtype.reg1 ==
-                  pipeline[MEM].stage.lw.dest_reg)) { // check for a hazard
-                    pipeline[WRITEBACK] = pipeline[MEM]; // forward WB to be MEM
-                    pipeline[MEM].itype = NOP; // make DECODE a NOP
-                    pipeline[MEM].instruction_address = 0x0; // update NOP empty address
-                  }
+            if(pipeline[ALU].itype == RTYPE) { 
+                /*determines if the instruction is rtype
+                */
+                if ((pipeline[ALU].stage.rtype.reg2_or_constant == pipeline[MEM].stage.lw.dest_reg)){
+                    /*
+                    determines if a condition for a data hazard is reached then forwards pipeline
+                    */
+                    pipeline[WRITEBACK] = pipeline[MEM]; 
+                    pipeline[MEM].instruction_address = 0x0;
+                    pipeline[MEM].itype = NOP;
                 }
-            //   norm = 1; // update normal process flag to false
-              pipeline_cycles += CACHE_MISS_DELAY; // increment the stall penalty
+                else if(pipeline[ALU].stage.rtype.reg1 ==pipeline[MEM].stage.lw.dest_reg) { 
+                    /*
+                    determines if the 2nd condition for a data hazard is reached then forwards pipeline
+                    */
+                    pipeline[WRITEBACK] = pipeline[MEM]; 
+                    pipeline[MEM].instruction_address = 0x0;
+                    pipeline[MEM].itype = NOP; 
+                }
+            }
+            pipeline_cycles += 10;//increments the cycles because of the data miss, 10 was specified in the document
         }
-
-        if(hit != 0)
-        { 
-            // printf("Address %x: Tag= %x, Index= %x\n", address, tag, index);
+        else{
+            /*if the data hits this should just print the address*/
             printf("DATA HIT:\t Address 0x%x \n", address);
         }
+        //LW end
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
-
     //check for immediate, 
     if (pipeline[MEM].itype == SW) {
 
