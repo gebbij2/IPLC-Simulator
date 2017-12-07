@@ -377,14 +377,18 @@ void iplc_sim_push_pipeline_stage()
             }
             else{
                 if(pipeline[FETCH].itype == RTYPE) { 
-                    // Forwards proper stages across pipeline if prediction is wrong
+                    /* 
+                    Forwards proper stages across pipeline if prediction is wrong
+                    */
                     pipeline[WRITEBACK] = pipeline[MEM]; 
                     pipeline[MEM] = pipeline[ALU]; 
                     pipeline[ALU] = pipeline[DECODE];
                     pipeline[DECODE].itype = NOP;
                     pipeline[DECODE].instruction_address = 0x0; 
                   } 
-                   // Forwards proper stages across pipeline if prediction is wrong
+                   /* 
+                   Forwards proper stages across pipeline if prediction is wrong
+                   */
                   else if (pipeline[FETCH].itype == LW) { 
                     pipeline[WRITEBACK] = pipeline[ALU];
                     pipeline[MEM] = pipeline[DECODE]; 
