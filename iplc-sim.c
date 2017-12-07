@@ -44,7 +44,7 @@ typedef struct cache_line
     int tag;
     int tag_size;
     int assoc;
-    int order[];
+    int order[4*sizeof(int)];
     // Your data structures for implementing your cache should include:
     // a valid bit
     // a tag
@@ -170,7 +170,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     }
 
     // Dynamically create our cache based on the information the user entered
-    cache = (cache_line_t *) malloc((sizeof(cache_line_t) * 1<<index));
+    cache = (cache_line_t *) malloc(((sizeof(cache_line_t) + sizeof(int)*cache_assoc) * 1<<index));
     
     // Initialize each line in the allocated cache
     for (i = 0; i < (1<<index); i++) {
@@ -180,8 +180,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
         tmp_line.assoc = cache_assoc;
         
         // Keep an ordering of the MRU to LRU
-        for(j=0; j<assoc; ++j) { tmp_line.order[j] = -1; }
-
+        for(j=0; j<cache_assoc; ++j) { tmp_line.order[j] = -1; }
         cache[i] = tmp_line;
     }
     
